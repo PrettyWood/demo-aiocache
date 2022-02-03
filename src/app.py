@@ -18,6 +18,7 @@ async def get_random_number(x: int) -> int:
     import random
 
     print("Generating number...")
+    await asyncio.sleep(3)
     n = random.randint(0, 1_000_000)
     print("Generating number...done")
 

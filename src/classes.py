@@ -22,10 +22,8 @@ class RedisSub:
     async def handle_query_request(self):
         from src.app import get_random_number_from_cache_or_compute
         # channel here is query def request
-        print('Ready to handle query requests')
         while True:
             message = self.channel.get_message()
-            print('Waiting for request')
             if message and message.get('type') == 'message':
                 print(f'Got a message {message}')
                 _id = message.get('data').decode('utf-8')
@@ -34,7 +32,6 @@ class RedisSub:
                         self.publish_to,
                         json.dumps(await get_random_number_from_cache_or_compute(int(_id)))
                     )
-            await asyncio.sleep(1)
 
     async def watch_and_publish(self, _id: int):
         while True:
