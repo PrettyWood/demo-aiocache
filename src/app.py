@@ -1,12 +1,13 @@
 import asyncio
 
-from aiocache import Cache, cached_stampede
+from aiocache import Cache
+from aiocache.lock import RedLock
 from fastapi import FastAPI
 
 app = FastAPI()
-cache = Cache(Cache.REDIS)
+cache = Cache(Cache.REDIS, ttl=10)
 
-@cached_stampede(ttl=10, cache=Cache.REDIS, lease=1)
+
 async def get_random_number(x: int) -> int:
     import random
 
@@ -20,6 +21,11 @@ async def get_random_number(x: int) -> int:
 
 @app.get("/")
 async def root(id: int = 0):
-    random_number = await get_random_number(id)
+    async with RedLock(cache, f'key_{id}', lease=2):
+        if (result_cached := await cache.get(f'key_{id}'))is not None:
+            return {"random number": result_cached}
+
+    result = await get_random_number(id)
+    await cache.set(f'key_{id}', result)
     
-    return {"random number": random_number}
+    return {"random number": result}
