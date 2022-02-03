@@ -1,3 +1,5 @@
+import sys
+
 import redis
 from aiocache import Cache
 from src.classes import RedisSub, RedisPub
@@ -44,9 +46,9 @@ tt = Thread(
     target=asyncio.run,
     args=(query_def_request_subscriber.handle_query_request(),)
 )
+tt.daemon = True
 try:
     tt.start()
-
     # pub/sub fetch query-definition
     query_def_response_subscriber = RedisSub(
         publish_to=channel_req,
@@ -54,8 +56,8 @@ try:
     )
     # subscribe on channel_resp
     query_def_response_subscriber.channel.subscribe(channel_resp)
-except KeyboardInterrupt:
-    tt.join()
+except (KeyboardInterrupt, SystemExit):
+    sys.exit()
 
 @app.get('/')
 async def root(_id: int):
