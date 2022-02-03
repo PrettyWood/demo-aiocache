@@ -26,11 +26,12 @@ async def get_random_number(x: int) -> int:
 
 async def get_random_number_from_cache_or_compute(_id: int):
     if (result_cached := await cache.get(f'key_{_id}')) is not None:
-        return {"result": result_cached}
+        return {"result": result_cached,"cache": True}
 
     result = await get_random_number(_id)
     await cache.set(f'key_{_id}', result)
-    return {"result": result}
+
+    return {"result": result,"cache": False}
 
 
 query_def_publisher = RedisPub()
