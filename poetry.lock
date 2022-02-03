@@ -236,7 +236,7 @@ h11 = ">=0.9.0,<1"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "438a7b0b494c755803a5f036f04550932f9a438319a7c6378e322b6673540186"
+content-hash = "ceecc20df67902d2412851e432d61c88864708b8b6881ae7092314904f981bd6"
 
 [metadata.files]
 aiocache = [
