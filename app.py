@@ -36,18 +36,24 @@ async def _get_random_number_from_cache_or_compute(_id: int):
         await redis.publish(channel_resp, message=json.dumps({"result": result,"cache": False,  '_id': _id}))
 
 
-
 @app.get('/')
 async def root(_id: int):
-    print(f'start {datetime.now().time()} - id {_id}')
-
     redis = await aioredis.create_redis(address="redis://localhost:6379")
+    print(f'start {datetime.now().time()} - id {_id}')
     await redis.publish(channel_req, _id)
     (chan,) = await redis.subscribe(channel_resp)
     while await chan.wait_message():
         try:
             msg = await chan.get()
-            print(f'end {datetime.now().time()} - id {_id}')
-            return msg
+            msg = json.loads(msg)
+            if msg.get('_id') == int(_id):
+                print(f'end {datetime.now().time()} - id {_id}')
+                await redis.unsubscribe(chan)
+                redis.close()
+                return msg
+    #await asyncio.sleep(0.5)
         except CancelledError:
             return
+
+
+
