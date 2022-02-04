@@ -1,21 +1,32 @@
 import asyncio
-import json
-from concurrent.futures import ThreadPoolExecutor
-import redis
-from app import channel_req, channel_resp, _get_random_number_from_cache_or_compute
-from classes import RedisPub, RedisSub
+from asyncio import CancelledError
+
+import aioredis
+from app import channel_req, _get_random_number_from_cache_or_compute
+
+
+async def handle_req_msg(msg):
+    print('Got Message:', msg)
+    await _get_random_number_from_cache_or_compute(int(msg))
+
+
+STOPWORD = "STOP"
+
+
+async def reader(ch):
+    while await ch.wait_message():
+        try:
+            msg = await ch.get()
+            asyncio.ensure_future(handle_req_msg(int(msg.decode())))
+        except CancelledError:
+            break
+
+
+
+async def main():
+    redis = await aioredis.create_redis(address="redis://localhost:6379")
+    (channel,) = await redis.subscribe(channel_req)
+    await reader(channel)
 
 if __name__ == '__main__':
-    query_def_response_publisher = RedisPub(channel=channel_resp)
-    query_def_request_subscriber = RedisSub()
-    query_def_request_subscriber.channel.subscribe(channel_req)
-
-    while True:
-        message = query_def_request_subscriber.channel.get_message()
-        if message:
-            print(message)
-        if message and message.get('type') == 'message':
-            print(f'Got a message {message}')
-            _id = message.get('data').decode('utf-8')
-            res = asyncio.run(_get_random_number_from_cache_or_compute(_id))
-            query_def_response_publisher.pub(json.dumps(res))
+    asyncio.run(main())

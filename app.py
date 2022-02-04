@@ -1,11 +1,16 @@
+import asyncio
+import json
+from asyncio import CancelledError
+
 from aiocache import Cache
 from fastapi import FastAPI
-import asyncio
+import aioredis
+from datetime import datetime
 
-from classes import RedisPub, RedisSub
+STOPWORD = "STOP"
 
 app = FastAPI()
-cache = Cache(Cache.REDIS, ttl=10)
+cache = Cache(Cache.REDIS, ttl=100)
 
 channel_req = 'query_def_request_channel'
 channel_resp = 'query_def_response_channel'
@@ -16,34 +21,33 @@ async def get_random_number(x: int) -> int:
 
     print("Generating number...")
     n = random.randint(0, 1_000_000)
+    await asyncio.sleep(5)
     print("Generating number...done")
     return n * int(x)
 
 
 async def _get_random_number_from_cache_or_compute(_id: int):
+    redis = await aioredis.create_redis(address="redis://localhost:6379")
     if (result_cached := await cache.get(f'key_{_id}')) is not None:
-        return {"result": result_cached,"cache": True, '_id': _id}
-
-    result = await get_random_number(_id)
-    await cache.set(f'key_{_id}', result)
-    return {"result": result,"cache": False,  '_id': _id}
-
-
-query_def_request_publisher = RedisPub(channel=channel_req)
-query_def_response_subscriber = RedisSub()
-query_def_response_subscriber.channel.subscribe(channel_resp)
+        await redis.publish(channel_resp, message=json.dumps({"result": result_cached,"cache": True, '_id': _id}))
+    else:
+        result = await get_random_number(_id)
+        await cache.set(f'key_{_id}', result)
+        await redis.publish(channel_resp, message=json.dumps({"result": result,"cache": False,  '_id': _id}))
 
 
 
 @app.get('/')
 async def root(_id: int):
-    from datetime import datetime
-    # publish on channel_req
-    # id => channel_req
-    print(f'start {datetime.now().time()}')
-    await asyncio.sleep(5)
-    query_def_request_publisher.pub(int(_id))
-    # Listen for the result in query_def_response_channel
-    res = query_def_response_subscriber.watch_and_publish_query_def(int(_id))
-    print(f'end {datetime.now().time()}')
-    return res
+    print(f'start {datetime.now().time()} - id {_id}')
+
+    redis = await aioredis.create_redis(address="redis://localhost:6379")
+    await redis.publish(channel_req, _id)
+    (chan,) = await redis.subscribe(channel_resp)
+    while await chan.wait_message():
+        try:
+            msg = await chan.get()
+            print(f'end {datetime.now().time()} - id {_id}')
+            return msg
+        except CancelledError:
+            return
