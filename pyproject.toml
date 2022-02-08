@@ -8,9 +8,11 @@ authors = ["Eric Jolibois <em.jolibois@gmail.com>"]
 python = "^3.10"
 aiocache = "^0.11.1"
 aioredis = "1.3.1"
+aioredlock = "^0.7.3"
 fastapi = "^0.73.0"
 hypercorn = {extras = ["uvloop"], version = "^0.13.2"}
 ujson = "^5.1.0"
+
 [tool.poetry.dev-dependencies]
 
 [build-system]

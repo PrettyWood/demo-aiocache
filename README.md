@@ -12,7 +12,7 @@ You need to run on the one side the ASGI web server that will handle
 HTTP requests and put queries in Redis as message broker
 
 ```console
-poetry run hypercorn -k uvloop src.app:app
+poetry run hypercorn -k uvloop app:app
 ```
 
 (You can of course choose another worker class like `asyncio`)
@@ -29,5 +29,5 @@ poetry run python executor.py
 # Run many simultaneous requests
 
 ```console
-xargs -I % -P 0 curl http://localhost:8000\?id\=1 < <(printf '%s\n' {1..10})
+xargs -I % -P 0 curl -s http://localhost:8000\?id\=1 < <(printf '%s\n' {1..10}) | jq
 ```
