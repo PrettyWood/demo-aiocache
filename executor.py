@@ -62,7 +62,7 @@ async def reader(channel):
 
 
 async def main():
-    sub = await aioredis.create_redis(address="redis://localhost:6379")
+    sub = await aioredis.create_redis_pool(address="redis://localhost:6379")
 
     try:
         (ch,) = await sub.psubscribe(f"{REQ_CHANNEL_NAME}:*")

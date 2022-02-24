@@ -9,8 +9,8 @@ RESP_CHANNEL_NAME = "query_def_response_channel"
 
 @app.on_event("startup")
 async def starup_event():
-    app.state.pub = await aioredis.create_redis(address="redis://localhost:6379")
-    app.state.sub = await aioredis.create_redis(address="redis://localhost:6379")
+    app.state.pub = await aioredis.create_redis_pool(address="redis://localhost:6379")
+    app.state.sub = await aioredis.create_redis_pool(address="redis://localhost:6379")
 
 
 @app.on_event("shutdown")
