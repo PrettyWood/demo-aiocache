@@ -1,5 +1,3 @@
-import json
-
 import aioredis
 from fastapi import FastAPI
 
@@ -17,20 +15,20 @@ async def starup_event():
 
 @app.on_event("shutdown")
 async def shutdown_event():
+    assert isinstance(app.state.pub, aioredis.Redis)
     app.state.pub.close()
-    app.state.sub.close()
     await app.state.pub.wait_closed()
+
+    assert isinstance(app.state.sub, aioredis.Redis)
+    app.state.sub.close()
     await app.state.sub.wait_closed()
 
 
 @app.get("/")
 async def root(id: int):
     assert isinstance(app.state.pub, aioredis.Redis)
-    await app.state.pub.publish(REQ_CHANNEL_NAME, id)
-    (resp_chan,) = await app.state.sub.subscribe(RESP_CHANNEL_NAME)
+    await app.state.pub.publish(f"{REQ_CHANNEL_NAME}:{id}", id)
+    (resp_chan,) = await app.state.sub.subscribe(f"{RESP_CHANNEL_NAME}:{id}")
     assert isinstance(resp_chan, aioredis.Channel)
     while await resp_chan.wait_message():
-        msg = await resp_chan.get()
-        msg = json.loads(msg)
-        if msg.get("id") == int(id):
-            return msg
+        return await resp_chan.get_json()
